@@ -49,6 +49,7 @@ export const governor = onchainTable(
     chainId: t.numeric().notNull(),
     address: t.hex().notNull(),
     token: t.hex().notNull(),
+    timelock: t.hex(),
 
     type: t.text(),
   }),

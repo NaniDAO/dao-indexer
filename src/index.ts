@@ -1,12 +1,24 @@
 import { ponder } from "ponder:registry";
-import { proposal, vote } from "ponder:schema";
+import { dao, profile, governor, proposal, vote } from "ponder:schema";
+import { daosData, profilesData, governorsData } from "../static_data";
+
+ponder.on("Governor:setup", async ({ context }) => {
+  // setup all static metadata
+  await context.db.insert(dao).values(daosData);
+  await context.db.insert(profile).values(profilesData);
+  await context.db.insert(governor).values(governorsData);
+});
 
 ponder.on("Governor:ProposalCreated", async ({ event, context }) => {
-  // Create proposal record
+  // Handle different parameter structures
+  const proposalId = event.args.proposalId ?? event.args.id;
+  const voteStart = event.args.voteStart ?? event.args.startBlock;
+  const voteEnd = event.args.voteEnd ?? event.args.endBlock;
+
   await context.db.insert(proposal).values({
     chainId: context.network.chainId.toString(),
     governor: event.log.address,
-    proposalId: event.args.proposalId ?? event.args.id,
+    proposalId,
     proposer: event.args.proposer,
 
     targets: event.args.targets,
@@ -14,10 +26,10 @@ ponder.on("Governor:ProposalCreated", async ({ event, context }) => {
     signatures: event.args.signatures,
     calldatas: event.args.calldatas,
 
-    votingDelay: Number(event.args.voteStart) - Number(event.block.number),
-    votingPeriod: event.args.voteEnd - event.args.voteStart,
-    voteStart: event.args.voteStart,
-    voteEnd: event.args.voteEnd,
+    votingDelay: Number(voteStart) - Number(event.block.number),
+    votingPeriod: Number(voteEnd) - Number(voteStart),
+    voteStart,
+    voteEnd,
 
     description: event.args.description,
     status: "PENDING",
@@ -29,18 +41,20 @@ ponder.on("Governor:ProposalCreated", async ({ event, context }) => {
 });
 
 ponder.on("Governor:VoteCast", async ({ event, context }) => {
-  // Map support value to enum
   const supportTypes = ["AGAINST", "FOR", "ABSTAIN"];
   const support = supportTypes[Number(event.args.support)];
 
-  // Create vote record
+  // Handle different weight/votes parameter
+  const weight = event.args.weight ?? event.args.votes;
+  const proposalId = event.args.proposalId ?? event.args.id;
+
   await context.db.insert(vote).values({
     chainId: context.network.chainId,
     governor: event.log.address,
-    proposalId: event.args.proposalId ?? event.args.id,
+    proposalId,
     voter: event.args.voter,
     support,
-    weight: event.args.weight,
+    weight,
     reason: event.args.reason,
     transactionHash: event.transaction.hash,
     blockNumber: event.block.number,
@@ -52,56 +66,45 @@ ponder.on("Governor:VoteCast", async ({ event, context }) => {
     .update(proposal, {
       chainId: context.network.chainId.toString(),
       governor: event.log.address,
-      proposalId: event.args.proposalId ?? event.args.id,
+      proposalId,
     })
     .set((row) => {
       if (support === "FOR")
-        return { forVotes: row.forVotes + event.args.weight };
+        return { forVotes: (row.forVotes ?? 0n) + BigInt(weight) };
       if (support === "AGAINST")
-        return { againstVotes: row.againstVotes + event.args.weight };
+        return { againstVotes: (row.againstVotes ?? 0n) + BigInt(weight) };
       if (support === "ABSTAIN")
-        return { abstainVotes: row.abstainVotes + event.args.weight };
+        return { abstainVotes: (row.abstainVotes ?? 0n) + BigInt(weight) };
       return {};
     });
 });
 
-// Handle status changes
-ponder.on("Governor:ProposalCanceled", async ({ event, context }) => {
-  await context.db
-    .update(proposal, {
-      chainId: context.network.chainId,
-      governor: event.log.address,
-      proposalId: event.args.proposalId ?? event.args.id,
-    })
-    .set(() => ({
-      status: "CANCELED",
-      cancelledAt: event.block.timestamp,
-    }));
-});
+// Handle status changes with unified proposalId access
+const handleStatusChange = (status: string) => {
+  return async ({ event, context }) => {
+    const proposalId = event.args.proposalId ?? event.args.id;
 
-ponder.on("Governor:ProposalExecuted", async ({ event, context }) => {
-  await context.db
-    .update(proposal, {
-      chainId: context.network.chainId.toString(),
-      governor: event.log.address,
-      proposalId: event.args.proposalId ?? event.args.id,
-    })
-    .set(() => ({
-      status: "EXECUTED",
-      executedAt: event.block.timestamp,
-    }));
-});
+    await context.db
+      .update(proposal, {
+        chainId: context.network.chainId.toString(),
+        governor: event.log.address,
+        proposalId,
+      })
+      .set(
+        status === "QUEUED"
+          ? {
+              status,
+              queuedAt: event.block.timestamp,
+              executableAt: event.args.eta,
+            }
+          : {
+              status,
+              [`${status.toLowerCase()}At`]: event.block.timestamp,
+            },
+      );
+  };
+};
 
-ponder.on("Governor:ProposalQueued", async ({ event, context }) => {
-  await context.db
-    .update(proposal, {
-      chainId: context.network.chainId.toString(),
-      governor: event.log.address,
-      proposalId: event.args.proposalId ?? event.args.id,
-    })
-    .set({
-      status: "QUEUED",
-      queuedAt: event.block.timestamp,
-      executableAt: event.args.eta,
-    });
-});
+ponder.on("Governor:ProposalCanceled", handleStatusChange("CANCELED"));
+ponder.on("Governor:ProposalExecuted", handleStatusChange("EXECUTED"));
+ponder.on("Governor:ProposalQueued", handleStatusChange("QUEUED"));
