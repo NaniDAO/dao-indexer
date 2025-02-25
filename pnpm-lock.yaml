@@ -12,8 +12,8 @@ importers:
         specifier: ^4.5.0
         version: 4.7.2
       ponder:
-        specifier: ^0.9.19
-        version: 0.9.19(@opentelemetry/api@1.9.0)(@types/node@20.17.19)(hono@4.7.2)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))
+        specifier: ^0.9.22
+        version: 0.9.22(@opentelemetry/api@1.9.0)(@types/node@20.17.19)(hono@4.7.2)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))
       viem:
         specifier: ^2.21.3
         version: 2.23.5(typescript@5.7.3)
@@ -1244,6 +1244,9 @@ packages:
     resolution: {integrity: sha512-S48WzZW777zhNIrn7gxOlISNAqi9ZC/uQFnRdbeIHhZhCA6UqpkOT8T1G7BvfdgP4Er8gF4sUbaS0i7QvIfCWw==}
     engines: {node: '>=8'}
 
+  obuf@1.1.2:
+    resolution: {integrity: sha512-PX1wu0AmAdPqOL1mWhqmlOd8kOIZQwGZw6rh7uby9fTc5lhaOWFLX3I6R1hrF9k3zUY40e6igsLGkDXK92LJNg==}
+
   on-exit-leak-free@2.1.2:
     resolution: {integrity: sha512-0eJJY6hXLGf1udHwfNftBqH+g73EU4B504nZeKpz1sYRKafAghwxEJunB2O7rDZkL4PGfsMVnTXZ2EjibbqcsA==}
     engines: {node: '>=14.0.0'}
@@ -1327,6 +1330,9 @@ packages:
   pg-connection-string@2.7.0:
     resolution: {integrity: sha512-PI2W9mv53rXJQEOb8xNR8lH7Hr+EKa6oJa38zsK0S/ky2er16ios1wLKhZyxzD7jUReiWokc9WK5nxSnC7W1TA==}
 
+  pg-copy-streams@6.0.6:
+    resolution: {integrity: sha512-Z+Dd2C2NIDTsjyFKmc6a9QLlpM8tjpERx+43RSx0WmL7j3uNChERi3xSvZUL0hWJ1oRUn4S3fhyt3apdSrTyKQ==}
+
   pg-int8@1.0.1:
     resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
     engines: {node: '>=4.0.0'}
@@ -1375,8 +1381,8 @@ packages:
     resolution: {integrity: sha512-ip4qdzjkAyDDZklUaZkcRFb2iA118H9SgRh8yzTkSQK8HilsOJF7rSY8HoW5+I0M46AZgX/pxbprf2vvzQCE0Q==}
     hasBin: true
 
-  ponder@0.9.19:
-    resolution: {integrity: sha512-E4V49c5ilNepbDKKyzRT9KSzOTu+x+N76QMiURBZIpdQURT2uXDqK7dGq9gLsqSFS3Wx7Dc1dEtmjuCxz9e+Xg==}
+  ponder@0.9.22:
+    resolution: {integrity: sha512-+2UvzHP6EmzFf5MI2Aus3v65SeKXtl75ixBE0exfZFrHg23j2yAHe9p00Y9pQ1Xq10yAkDRPb6SHfYPOLpFkMQ==}
     engines: {node: '>=18.14'}
     hasBin: true
     peerDependencies:
@@ -2856,6 +2862,8 @@ snapshots:
     dependencies:
       path-key: 3.1.1
 
+  obuf@1.1.2: {}
+
   on-exit-leak-free@2.1.2: {}
 
   once@1.4.0:
@@ -2935,6 +2943,10 @@ snapshots:
 
   pg-connection-string@2.7.0: {}
 
+  pg-copy-streams@6.0.6:
+    dependencies:
+      obuf: 1.1.2
+
   pg-int8@1.0.1: {}
 
   pg-pool@3.7.1(pg@8.13.3):
@@ -2992,7 +3004,7 @@ snapshots:
       sonic-boom: 3.8.1
       thread-stream: 2.7.0
 
-  ponder@0.9.19(@opentelemetry/api@1.9.0)(@types/node@20.17.19)(hono@4.7.2)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3)):
+  ponder@0.9.22(@opentelemetry/api@1.9.0)(@types/node@20.17.19)(hono@4.7.2)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3)):
     dependencies:
       '@babel/code-frame': 7.26.2
       '@commander-js/extra-typings': 12.1.0(commander@12.1.0)
@@ -3018,6 +3030,7 @@ snapshots:
       kysely: 0.26.3
       pg: 8.13.3
       pg-connection-string: 2.7.0
+      pg-copy-streams: 6.0.6
       pg-query-emscripten: 5.1.0
       picocolors: 1.1.1
       pino: 8.21.0

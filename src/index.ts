@@ -15,6 +15,20 @@ ponder.on("Governor:ProposalCreated", async ({ event, context }) => {
   const voteStart = event.args.voteStart ?? event.args.startBlock;
   const voteEnd = event.args.voteEnd ?? event.args.endBlock;
 
+  const { client } = context;
+  const { Governor } = context.contracts;
+
+  const votingDelay = await client.readContract({
+    abi: Governor.abi,
+    address: event.log.address,
+    functionName: "votingDelay",
+  });
+  const votingPeriod = await client.readContract({
+    abi: Governor.abi,
+    address: event.log.address,
+    functionName: "votingPeriod",
+  });
+
   await context.db.insert(proposal).values({
     chainId: context.network.chainId.toString(),
     governor: event.log.address,
@@ -26,8 +40,8 @@ ponder.on("Governor:ProposalCreated", async ({ event, context }) => {
     signatures: event.args.signatures,
     calldatas: event.args.calldatas,
 
-    votingDelay: Number(voteStart) - Number(event.block.number),
-    votingPeriod: Number(voteEnd) - Number(voteStart),
+    votingDelay: votingDelay,
+    votingPeriod: votingPeriod,
     voteStart,
     voteEnd,
 
