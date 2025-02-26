@@ -18,16 +18,25 @@ ponder.on("Governor:ProposalCreated", async ({ event, context }) => {
   const { client } = context;
   const { Governor } = context.contracts;
 
-  const votingDelay = await client.readContract({
-    abi: Governor.abi,
-    address: event.log.address,
-    functionName: "votingDelay",
-  });
-  const votingPeriod = await client.readContract({
-    abi: Governor.abi,
-    address: event.log.address,
-    functionName: "votingPeriod",
-  });
+  /* @TODO
+   * TEMPORARY: .catch(() => 0n) is a workaround while investigating failing votingDelay/Period reads
+   * on proposal tx: 0x4f9e1c4922670d55f0dfaaa45c7c580570b29b2139c655e5ff9f29ddf8eaf3d4
+   * ContractFunctionZeroDataError: The contract function "votingDelay" returned no data ("0x")
+   */
+  const votingDelay = await client
+    .readContract({
+      abi: Governor.abi,
+      address: event.log.address,
+      functionName: "votingDelay",
+    })
+    .catch(() => 0n);
+  const votingPeriod = await client
+    .readContract({
+      abi: Governor.abi,
+      address: event.log.address,
+      functionName: "votingPeriod",
+    })
+    .catch(() => 0n);
 
   await context.db.insert(proposal).values({
     chainId: context.network.chainId.toString(),
