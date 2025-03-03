@@ -18,6 +18,17 @@ export const supportType = onchainEnum("supportType", [
   "ABSTAIN",
 ]);
 
+export const voteType = onchainEnum("voteType", [
+  "SIMPLE_MAJORITY",
+  "SIMPLE_MAJORITY_QUORUM_REQUIRED",
+  "SUPERMAJORITY",
+  "SUPERMAJORITY_QUORUM_REQUIRED",
+]);
+
+// ===============================
+// Core DAO
+// ===============================
+
 export const dao = onchainTable("dao", (t) => ({
   id: t.text().primaryKey(),
 }));
@@ -28,6 +39,7 @@ export const daoRelations = relations(dao, ({ one, many }) => ({
     references: [profile.daoId],
   }),
   governors: many(governor),
+  kali: many(kali),
 }));
 
 export const profile = onchainTable("profile", (t) => ({
@@ -40,6 +52,181 @@ export const profile = onchainTable("profile", (t) => ({
   twitter: t.text(),
   discord: t.text(),
 }));
+
+// ===============================
+// KaliDAO
+// ===============================
+
+export const kali = onchainTable(
+  "kali",
+  (t) => ({
+    daoId: t.text().notNull(),
+
+    chainId: t.numeric().notNull(),
+    address: t.hex().notNull(),
+
+    name: t.text().notNull(),
+    symbol: t.text().notNull(),
+    decimals: t.integer().notNull(), // Always 18
+    docs: t.text(),
+
+    votingPeriod: t.integer().notNull(),
+    gracePeriod: t.integer().notNull(),
+    quorum: t.integer().notNull(),
+    supermajority: t.integer().notNull(),
+
+    mintVoteType: voteType().notNull(),
+    burnVoteType: voteType().notNull(),
+    callVoteType: voteType().notNull(),
+    periodVoteType: voteType().notNull(),
+    gracePeriodVoteType: voteType().notNull(),
+    quorumVoteType: voteType().notNull(),
+    supermajorityVoteType: voteType().notNull(),
+    typeVoteType: voteType().notNull(),
+    pauseVoteType: voteType().notNull(),
+    extensionVoteType: voteType().notNull(),
+    escapeVoteType: voteType().notNull(),
+    docsVoteType: voteType().notNull(),
+
+    totalSupply: t.bigint().notNull(),
+    paused: t.boolean().notNull(),
+
+    createdAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.chainId, table.address],
+    }),
+  }),
+);
+
+export const kaliRelations = relations(kali, ({ one, many }) => ({
+  dao: one(dao, {
+    fields: [kali.daoId],
+    references: [dao.id],
+  }),
+  proposals: many(kaliProposal),
+}));
+
+export const kaliProposal = onchainTable(
+  "kaliProposal",
+  (t) => ({
+    chainId: t.numeric().notNull(),
+    kali: t.hex().notNull(),
+    proposalId: t.bigint().notNull(),
+
+    proposer: t.hex().notNull(),
+    proposalType: t.integer().notNull(), // KaliDAO.ProposalType enum
+    description: t.text().notNull(),
+    prevProposal: t.bigint(),
+
+    sponsor: t.hex(),
+    sponsored: t.boolean(),
+
+    yesVotes: t.bigint().notNull(),
+    noVotes: t.bigint().notNull(),
+
+    accounts: t.hex().array(),
+    amounts: t.bigint().array(),
+    payloads: t.hex().array(),
+
+    status: proposalStatus().notNull(),
+
+    creationTime: t.bigint().notNull(),
+    transactionHash: t.hex().notNull(),
+    blockNumber: t.bigint().notNull(),
+  }),
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.chainId, table.kali, table.proposalId],
+    }),
+  }),
+);
+
+export const kaliProposalRelations = relations(
+  kaliProposal,
+  ({ one, many }) => ({
+    kali: one(kali, {
+      fields: [kaliProposal.chainId, kaliProposal.kali],
+      references: [kali.chainId, kali.address],
+    }),
+    votes: many(kaliVote),
+  }),
+);
+
+export const kaliMember = onchainTable(
+  "kaliMember",
+  (t) => ({
+    chainId: t.numeric().notNull(),
+    kali: t.hex().notNull(),
+    address: t.hex().notNull(),
+
+    tokenBalance: t.bigint().notNull(),
+    votingPower: t.bigint().notNull(), // delegated voting power
+    delegate: t.hex(),
+
+    lastYesVote: t.bigint(), // track last yes vote for rage quit
+    proposalsVoted: t.bigint(),
+
+    firstJoinedAt: t.bigint().notNull(),
+    updatedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.chainId, table.kali, table.address],
+    }),
+  }),
+);
+
+export const kaliMemberRelations = relations(kaliMember, ({ one, many }) => ({
+  kali: one(kali, {
+    fields: [kaliMember.chainId, kaliMember.kali],
+    references: [kali.chainId, kali.address],
+  }),
+  votes: many(kaliVote),
+}));
+
+export const kaliVote = onchainTable(
+  "kaliVote",
+  (t) => ({
+    chainId: t.numeric().notNull(),
+    kali: t.hex().notNull(),
+    proposalId: t.bigint().notNull(),
+    voter: t.hex().notNull(),
+
+    approve: t.boolean().notNull(),
+
+    weight: t.bigint().notNull(), // weight at time of vote
+
+    transactionHash: t.hex().notNull(),
+    blockNumber: t.bigint().notNull(),
+    blockTimestamp: t.bigint().notNull(),
+  }),
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.chainId, table.kali, table.proposalId, table.voter],
+    }),
+  }),
+);
+
+export const kaliVoteRelations = relations(kaliVote, ({ one }) => ({
+  proposal: one(kaliProposal, {
+    fields: [kaliVote.chainId, kaliVote.kali, kaliVote.proposalId],
+    references: [
+      kaliProposal.chainId,
+      kaliProposal.kali,
+      kaliProposal.proposalId,
+    ],
+  }),
+  member: one(kaliMember, {
+    fields: [kaliVote.chainId, kaliVote.kali, kaliVote.voter],
+    references: [kaliMember.chainId, kaliMember.kali, kaliMember.address],
+  }),
+}));
+
+// ===============================
+// Governor
+// ===============================
 
 export const governor = onchainTable(
   "governor",
